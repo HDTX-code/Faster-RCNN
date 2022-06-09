@@ -130,13 +130,13 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='训练参数设置')
     parser.add_argument('--am', type=int, default=0, help='annotation_mode')
-    parser.add_argument('--cp', type=str, default=r"D:\project\faster_rcnn\model_data\voc_classes.txt",
+    parser.add_argument('--cp', type=str, default=r"weights/voc_classes.txt",
                         help='classes_path')
     parser.add_argument('--sp', type=str, default=r"./weights", help='save_path')
     parser.add_argument('--tvt', type=float, default=1, help='trainval_percent')
     parser.add_argument('--t', type=float, default=0.9, help='train_percent')
-    parser.add_argument('--pp', type=float, default=0.01, help='photo_per')
-    parser.add_argument('--voc_p', type=str, default=r"D:\project\faster_rcnn\data\VOCdevkit",
+    parser.add_argument('--pp', type=float, default=0.5, help='photo_per')
+    parser.add_argument('--voc_p', type=str, default=r"data/VOCdevkit",
                         help='VOCdevkit_path')
     args = parser.parse_args()
 
