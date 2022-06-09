@@ -1,13 +1,16 @@
 import math
 import sys
+import time
 
 import torch
 
+from train_utils.coco_eval import CocoEvaluator
+from train_utils.coco_utils import get_coco_api_from_dataset
 from train_utils.distributed_utils import MetricLogger, SmoothedValue, reduce_dict
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
-                    print_freq=50, warmup=False, scaler=None):
+                    print_freq=50, scaler=None):
     model.train()
     metric_logger = MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -50,3 +53,57 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         metric_logger.update(lr=now_lr)
 
     return mean_loss, now_lr
+
+
+@torch.no_grad()
+def evaluate(model, data_loader, device):
+
+    cpu_device = torch.device("cpu")
+    model.eval()
+    metric_logger = MetricLogger(delimiter="  ")
+    header = "Test: "
+
+    coco = get_coco_api_from_dataset(data_loader.dataset)
+    iou_types = _get_iou_types(model)
+    coco_evaluator = CocoEvaluator(coco, iou_types)
+
+    for image, targets in metric_logger.log_every(data_loader, 100, header):
+        image = list(img.to(device) for img in image)
+
+        # 当使用CPU时，跳过GPU相关指令
+        if device != torch.device("cpu"):
+            torch.cuda.synchronize(device)
+
+        model_time = time.time()
+        outputs = model(image)
+
+        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+        model_time = time.time() - model_time
+
+        res = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
+
+        evaluator_time = time.time()
+        coco_evaluator.update(res)
+        evaluator_time = time.time() - evaluator_time
+        metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
+
+    # gather the stats from all processes
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats:", metric_logger)
+    coco_evaluator.synchronize_between_processes()
+
+    # accumulate predictions from all images
+    coco_evaluator.accumulate()
+    coco_evaluator.summarize()
+
+    coco_info = coco_evaluator.coco_eval[iou_types[0]].stats.tolist()  # numpy to list
+
+    return coco_info
+
+
+def _get_iou_types(model):
+    model_without_ddp = model
+    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+        model_without_ddp = model.module
+    iou_types = ["bbox"]
+    return iou_types

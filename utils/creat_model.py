@@ -102,7 +102,7 @@ def creat_model_without_fpn(backbone, num_classes, model_path=None, pretrained=T
                        rpn_anchor_generator=anchor_generator,
                        box_roi_pool=roi_pooler)
 
-    if model_path is not None:
+    if model_path != '':
         model = load_model(model, model_path)
 
     return model

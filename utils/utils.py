@@ -24,16 +24,16 @@ def show_config(**kwargs):
 # ---------------------------------------------------#
 #   获取dataset
 # ---------------------------------------------------#
-def get_dataset(lines, train=True):
+def get_dataset(lines, class_names, train=True):
     data_transform = {
         "train": transforms.Compose([transforms.ToTensor(),
                                      transforms.RandomHorizontalFlip(0.5)]),
         "val": transforms.Compose([transforms.ToTensor()])
     }
     if train:
-        dataset = FRCNNDataset(lines, train=train, transforms=data_transform["train"])
+        dataset = FRCNNDataset(lines, train=train, transforms=data_transform["train"], class_names=class_names)
     else:
-        dataset = FRCNNDataset(lines, train=train, transforms=data_transform["val"])
+        dataset = FRCNNDataset(lines, train=train, transforms=data_transform["val"], class_names=class_names)
     return dataset
 
 
