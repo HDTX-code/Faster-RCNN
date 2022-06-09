@@ -6,11 +6,11 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from train_utils.group_by_aspect_ratio import create_aspect_ratio_groups, GroupedBatchSampler
-from utils.creat_model import get_model
+from utils.group_by_aspect_ratio import create_aspect_ratio_groups, GroupedBatchSampler
+from backbone.creat_model import get_model
 from utils.plot_curve import plot_loss_and_lr, plot_map
 from utils.train_one_epoch import train_one_epoch, evaluate
-from utils.utils import show_config, get_dataset, get_classes, get_lr_scheduler, set_optimizer_lr, get_lr_fun
+from utils.utils import show_config, get_dataset, get_classes, set_optimizer_lr, get_lr_fun
 
 
 def main(args):
@@ -18,10 +18,11 @@ def main(args):
     #                       训练相关准备                            #
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-    time_str = datetime.datetime.strftime(datetime.datetime.now(), '%Y_%m_%d_%H_%M_%S')
-    log_dir = os.path.join(args.save_dir, "loss_" + str(time_str))
+    time_str = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d%H%M%S')
+    log_dir = os.path.join(args.sd, "loss_" + str(time_str))
     # 用来保存coco_info的文件
-    results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    results_file = os.path.join(log_dir,
+                                "results{}.txt".format(datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
     # 检查保存文件夹是否存在
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -54,7 +55,7 @@ def main(args):
     Min_lr = float(args.ilr) * 0.01
     optimizer_type_Freeze = str(args.opt_t_F)
     optimizer_type_UnFreeze = str(args.opt_t_UnF)
-    momentum = float(args.momentum)
+    momentum = float(args.m)
     lr_decay_type_Freeze = str(args.lr_d_t_F)
     lr_decay_type_UnFreeze = str(args.lr_d_t_UnF)
     pretrained = bool(args.pre)
@@ -120,6 +121,7 @@ def main(args):
                 num_train=num_train, num_val=num_val, amp=args.amp, pretrained=pretrained, eval_flag=eval_flag,
                 eval_period=eval_period, Cuda=Cuda, GPU=torch.cuda.current_device(), print_freq=print_freq)
 
+    # 获取lr下降函数
     lr_scheduler_func_Freeze, Init_lr_fit_Freeze, Min_lr_fit_Freeze = get_lr_fun(optimizer_type_Freeze,
                                                                                  batch_size,
                                                                                  Init_lr,
@@ -155,9 +157,7 @@ def main(args):
 
     for epoch in range(1, Freeze_Epoch + 1):
         set_optimizer_lr(optimizer, lr_scheduler_func_Freeze, epoch - 1)
-        mean_loss, lr = train_one_epoch(model, optimizer, gen,
-                                        device, epoch, print_freq=print_freq,
-                                        scaler=scaler)
+        mean_loss, lr = train_one_epoch(model, optimizer, gen, device, epoch, print_freq=print_freq, scaler=scaler)
         train_loss.append(mean_loss.item())
         learning_rate.append(lr)
 
@@ -192,9 +192,7 @@ def main(args):
     # 解冻训练
     for epoch in range(Freeze_Epoch + 1, UnFreeze_Epoch + Freeze_Epoch + 1):
         set_optimizer_lr(optimizer, lr_scheduler_func_UnFreeze, epoch - Freeze_Epoch + 1)
-        mean_loss, lr = train_one_epoch(model, optimizer, gen,
-                                        device, epoch, print_freq=print_freq,
-                                        scaler=scaler)
+        mean_loss, lr = train_one_epoch(model, optimizer, gen, device, epoch, print_freq=print_freq, scaler=scaler)
         train_loss.append(mean_loss.item())
         learning_rate.append(lr)
 
@@ -213,20 +211,20 @@ def main(args):
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
-        plot_loss_and_lr(train_loss, learning_rate)
+        plot_loss_and_lr(train_loss, learning_rate, log_dir)
 
     if eval_flag:
         # plot mAP curve
         if len(val_map) != 0:
-            plot_map(val_map)
+            plot_map(val_map, log_dir)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='训练参数设置')
+    parser = argparse.ArgumentParser(description='Training parameter setting')
     parser.add_argument('--bb', type=str, default='resnet50', help='backbone')
     parser.add_argument('--cp', type=str, default=r"D:\project\faster_rcnn\model_data\voc_classes.txt",
                         help='classes_path')
-    parser.add_argument('--save_dir', type=str, default="./weights", help='save_dir')
+    parser.add_argument('--sd', type=str, default="weights", help='save_dir')
     parser.add_argument('--mp', type=str, default="", help='model_path')
     parser.add_argument('--GPU', type=int, default=0, help='GPU_ID')
     parser.add_argument('--train', type=str, default=r"D:\project\faster_rcnn\test.txt", help="train_txt_path")
@@ -234,21 +232,21 @@ if __name__ == '__main__':
     parser.add_argument('--opt_t_F', type=str, default='adam', help="optimizer_type_Freeze")
     parser.add_argument('--opt_t_UnF', type=str, default='adam', help="optimizer_type_UnFreeze")
     parser.add_argument('--bs', type=int, default=1, help="batch_size")
-    parser.add_argument('--argf', type=int, default=-1, help="aspect_ratio_group_factor")
+    parser.add_argument('--argf', type=int, default=3, help="aspect_ratio_group_factor")
     parser.add_argument('--lr_d_t_F', type=str, default='cos', help="lr_decay_type_Freeze,'step' or 'cos'")
     parser.add_argument('--lr_d_t_UnF', type=str, default='cos', help="lr_decay_type_UnFreeze,'step' or 'cos'")
     parser.add_argument('--nw', type=int, default=24, help="num_workers")
     parser.add_argument('--ilr', type=float, default=1e-4, help="max lr")
-    parser.add_argument('--momentum', type=float, default=0.9, help="优化器动量")
+    parser.add_argument('--m', type=float, default=0.9, help="momentum")
     parser.add_argument('--wd', type=float, default=0, help="weight_decay，adam is 0")
     parser.add_argument('--fe', type=int, default=1, help="Freeze_Epoch")
     parser.add_argument('--ufe', type=int, default=1, help="UnFreeze_Epoch")
     parser.add_argument('--ie', type=int, default=0, help="Init_Epoch")
     parser.add_argument('--ep', type=int, default=5, help="eval_period")
-    parser.add_argument('--ef', default=True, action='store_true', help="是否在训练过程中检测")
+    parser.add_argument('--pf', default=100, type=int, help="print_freq")
+    parser.add_argument('--ef', default=True, action='store_true', help="Whether to calculate map during training")
     parser.add_argument('--pre', default=False, action='store_true', help="pretrained")
-    parser.add_argument('--pf', default=1000, type=int, help="print_freq")
-    parser.add_argument('--amp', default=False, action='store_true', help="amp")
+    parser.add_argument('--amp', default=False, action='store_true', help="amp or Not")
     args = parser.parse_args()
 
     main(args)

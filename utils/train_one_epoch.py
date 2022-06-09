@@ -4,9 +4,9 @@ import time
 
 import torch
 
-from train_utils.coco_eval import CocoEvaluator
-from train_utils.coco_utils import get_coco_api_from_dataset
-from train_utils.distributed_utils import MetricLogger, SmoothedValue, reduce_dict
+from utils.coco_eval import CocoEvaluator
+from utils.coco_utils import get_coco_api_from_dataset
+from utils.distributed_utils import MetricLogger, SmoothedValue, reduce_dict
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,

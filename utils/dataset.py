@@ -26,14 +26,13 @@ class FRCNNDataset(Dataset):
         line = self.annotation_lines[index].split()
         image_path = line[0]
         box_and_label = np.array([np.array(list(map(int, box.split(',')))) for box in line[1:]])
-        image_id = line[0].split("/")[-1][:-4]
         image = Image.open(image_path)
         boxs, labels = box_and_label[:, :-1], box_and_label[:, -1]
         area = self.get_area(boxs)
         target = {
             "boxes": torch.as_tensor(boxs, dtype=torch.float32),
             "labels": torch.as_tensor(labels, dtype=torch.int64),
-            "image_id": torch.as_tensor(int(image_id)),
+            "image_id": torch.as_tensor([index]),
             "area": torch.as_tensor(area, dtype=torch.float32),
             "iscrowd": torch.zeros(area.shape, dtype=torch.int64)
         }
@@ -48,6 +47,14 @@ class FRCNNDataset(Dataset):
         w = boxs[:, 2] - boxs[:, 0]
         return h * w
 
+    def get_height_and_width(self, index):
+        line = self.annotation_lines[index].split()
+        image_path = line[0]
+        image = Image.open(image_path)
+        data_height = int(image.size[1])
+        data_width = int(int(image.size[0]))
+        return data_height, data_width
+
     def coco_index(self, index):
         """
         该方法是专门为pycocotools统计标签信息准备，不对图像和标签作任何处理
@@ -55,6 +62,7 @@ class FRCNNDataset(Dataset):
 
         Args:
             idx: 输入需要获取图像的索引
+            :param index: 索引
         """
         line = self.annotation_lines[index].split()
         image_path = line[0]
@@ -68,7 +76,7 @@ class FRCNNDataset(Dataset):
         target = {
             "boxes": torch.as_tensor(boxs, dtype=torch.float32),
             "labels": torch.as_tensor(labels, dtype=torch.int64),
-            "image_id": torch.as_tensor(int(image_id)),
+            "image_id": torch.as_tensor([index]),
             "area": torch.as_tensor(area, dtype=torch.float32),
             "iscrowd": torch.zeros(area.shape, dtype=torch.int64)
         }
