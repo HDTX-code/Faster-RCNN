@@ -133,3 +133,11 @@ def get_lr_fun(optimizer_type, batch_size, Init_lr, Min_lr, Epoch, lr_decay_type
     lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr_fit, Min_lr_fit, Epoch)
 
     return lr_scheduler_func, Init_lr_fit, Min_lr_fit
+
+
+# ---------------------------------------------------#
+#   获得学习率
+# ---------------------------------------------------#
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']

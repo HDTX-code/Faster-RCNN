@@ -109,8 +109,8 @@ def main(args):
                                           num_workers=num_workers,
                                           collate_fn=val_dataset.collate_fn)
 
+    # model初始化
     model = get_model(backbone, num_classes, model_path=model_path, pretrained=pretrained).to(device)
-    print(model)
 
     # 打印训练参数
     show_config(backbone=backbone, num_classes=num_classes, model_path=model_path, Init_Epoch=Init_Epoch,
@@ -134,7 +134,7 @@ def main(args):
                                                                                        Min_lr,
                                                                                        UnFreeze_Epoch,
                                                                                        lr_decay_type_UnFreeze)
-
+    # 记录loss lr map
     train_loss = []
     learning_rate = []
     val_map = []
@@ -221,14 +221,14 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training parameter setting')
-    parser.add_argument('--bb', type=str, default='resnet50', help='backbone')
+    parser.add_argument('--bb', type=str, default='resnet50_fpn', help='backbone')
     parser.add_argument('--cp', type=str, default=r"D:\project\faster_rcnn\model_data\voc_classes.txt",
                         help='classes_path')
     parser.add_argument('--sd', type=str, default="weights", help='save_dir')
     parser.add_argument('--mp', type=str, default="", help='model_path')
     parser.add_argument('--GPU', type=int, default=0, help='GPU_ID')
-    parser.add_argument('--train', type=str, default=r"D:\project\faster_rcnn\test.txt", help="train_txt_path")
-    parser.add_argument('--val', type=str, default=r"D:\project\faster_rcnn\test.txt", help="val_txt_path")
+    parser.add_argument('--train', type=str, default=r"2007_train.txt", help="train_txt_path")
+    parser.add_argument('--val', type=str, default=r"2007_val.txt", help="val_txt_path")
     parser.add_argument('--opt_t_F', type=str, default='adam', help="optimizer_type_Freeze")
     parser.add_argument('--opt_t_UnF', type=str, default='adam', help="optimizer_type_UnFreeze")
     parser.add_argument('--bs', type=int, default=1, help="batch_size")
@@ -245,7 +245,7 @@ if __name__ == '__main__':
     parser.add_argument('--ep', type=int, default=5, help="eval_period")
     parser.add_argument('--pf', default=100, type=int, help="print_freq")
     parser.add_argument('--ef', default=True, action='store_true', help="Whether to calculate map during training")
-    parser.add_argument('--pre', default=False, action='store_true', help="pretrained")
+    parser.add_argument('--pre', default=True, action='store_true', help="pretrained")
     parser.add_argument('--amp', default=False, action='store_true', help="amp or Not")
     args = parser.parse_args()
 

@@ -7,6 +7,7 @@ import torch
 from utils.coco_eval import CocoEvaluator
 from utils.coco_utils import get_coco_api_from_dataset
 from utils.distributed_utils import MetricLogger, SmoothedValue, reduce_dict
+from utils.utils import get_lr
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
@@ -49,10 +50,9 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
             optimizer.step()
 
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
-        now_lr = optimizer.param_groups[0]["lr"]
-        metric_logger.update(lr=now_lr)
+        metric_logger.update(lr=get_lr(optimizer))
 
-    return mean_loss, now_lr
+    return mean_loss, get_lr(optimizer)
 
 
 @torch.no_grad()

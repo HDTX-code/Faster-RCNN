@@ -25,7 +25,7 @@ class FRCNNDataset(Dataset):
         self.xml_list = []
         line = self.annotation_lines[index].split()
         image_path = line[0]
-        box_and_label = np.array([np.array(list(map(int, box.split(',')))) for box in line[1:]])
+        box_and_label = np.array([np.array(list(map(int, box.split(',')))) for box in line[1:len(line)-1]])
         image = Image.open(image_path)
         boxs, labels = box_and_label[:, :-1], box_and_label[:, -1]
         area = self.get_area(boxs)
@@ -49,10 +49,8 @@ class FRCNNDataset(Dataset):
 
     def get_height_and_width(self, index):
         line = self.annotation_lines[index].split()
-        image_path = line[0]
-        image = Image.open(image_path)
-        data_height = int(image.size[1])
-        data_width = int(int(image.size[0]))
+        hw = line[-1]
+        data_height, data_width = [int(x) for x in hw.split(",")]
         return data_height, data_width
 
     def coco_index(self, index):
@@ -65,14 +63,12 @@ class FRCNNDataset(Dataset):
             :param index: 索引
         """
         line = self.annotation_lines[index].split()
-        image_path = line[0]
-        box_and_label = np.array([np.array(list(map(int, box.split(',')))) for box in line[1:]])
-        image_id = line[0].split("/")[-1][:-4]
-        image = Image.open(image_path)
+        box_and_label = np.array([np.array(list(map(int, box.split(',')))) for box in line[1:len(line) - 1]])
+        line = self.annotation_lines[index].split()
+        hw = line[-1]
+        data_height, data_width = [int(x) for x in hw.split(",")]
         boxs, labels = box_and_label[:, :-1], box_and_label[:, -1]
         area = self.get_area(boxs)
-        data_height = int(image.size[1])
-        data_width = int(int(image.size[0]))
         target = {
             "boxes": torch.as_tensor(boxs, dtype=torch.float32),
             "labels": torch.as_tensor(labels, dtype=torch.int64),

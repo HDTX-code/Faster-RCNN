@@ -1,8 +1,11 @@
+import torch
 import torchvision
+from torch.utils import model_zoo
 from torchvision.models.feature_extraction import create_feature_extractor
 
 from backbone.feature_pyramid_network import BackboneWithFPN, LastLevelMaxPool
-from network.faster_rcnn_framework import FasterRCNN
+from backbone.resnet50_fpn_model import resnet50_fpn_backbone
+from network.faster_rcnn_framework import FasterRCNN, FastRCNNPredictor
 from network.rpn_function import AnchorsGenerator
 from utils.utils import load_model
 
@@ -19,7 +22,7 @@ def creat_model_with_fpn(backbone, num_classes, model_path=None, pretrained=True
         in_channels_list = [40, 80, 1280]
         new_backbone = create_feature_extractor(backbone, return_layers)
 
-    else:
+    elif backbone == 'mobil_v3_l_fpn':
         # --- mobilenet_v3_large fpn backbone --- #
         backbone = torchvision.models.mobilenet_v3_large(pretrained=pretrained)
         # print(backbone)
@@ -30,6 +33,23 @@ def creat_model_with_fpn(backbone, num_classes, model_path=None, pretrained=True
         in_channels_list = [40, 112, 960]
         new_backbone = create_feature_extractor(backbone, return_layers)
 
+    else:
+        # --- resnet50 fpn backbone --- #
+        backbone = resnet50_fpn_backbone(norm_layer=torch.nn.BatchNorm2d, trainable_layers=3)
+        model = FasterRCNN(backbone=backbone, num_classes=91)
+        if pretrained:
+            state_dict = model_zoo.load_url(
+                'https://download.pytorch.org/models/fasterrcnn_resnet50_fpn_coco-258fb6c6.pth')
+            missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+            if len(missing_keys) != 0 or len(unexpected_keys) != 0:
+                print("missing_keys: ", len(missing_keys))
+                print("unexpected_keys: ", len(unexpected_keys))
+        in_features = model.roi_heads.box_predictor.cls_score.in_features
+        # replace the pre-trained head with a new one
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+        if model_path != "":
+            model = load_model(model, model_path)
+        return model
     # 检查新网络形状
     # img = torch.randn(1, 3, 224, 224)
     # outputs = new_backbone(img)
