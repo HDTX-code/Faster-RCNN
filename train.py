@@ -209,6 +209,13 @@ def main(args):
 
             val_map.append(coco_info[1])  # pascal mAP
 
+            if val_map[-1] > val_map[-2]:
+                torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
+        else:
+            if train_loss[-1].item() < train_loss[-2].item():
+                torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                print("Save best loss {:.4f}".format(train_loss[-1]))
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         plot_loss_and_lr(train_loss, learning_rate, log_dir)
@@ -227,8 +234,8 @@ if __name__ == '__main__':
     parser.add_argument('--sd', type=str, default="weights", help='save_dir')
     parser.add_argument('--mp', type=str, default="", help='model_path')
     parser.add_argument('--GPU', type=int, default=0, help='GPU_ID')
-    parser.add_argument('--train', type=str, default=r"2007_train.txt", help="train_txt_path")
-    parser.add_argument('--val', type=str, default=r"2007_val.txt", help="val_txt_path")
+    parser.add_argument('--train', type=str, default=r"weights/train.txt", help="train_txt_path")
+    parser.add_argument('--val', type=str, default=r"weights/val.txt", help="val_txt_path")
     parser.add_argument('--opt_t_F', type=str, default='adam', help="optimizer_type_Freeze")
     parser.add_argument('--opt_t_UnF', type=str, default='adam', help="optimizer_type_UnFreeze")
     parser.add_argument('--bs', type=int, default=1, help="batch_size")
