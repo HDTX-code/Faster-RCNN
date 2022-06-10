@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 from PIL import Image
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 from lxml import etree
 from torch.utils.data.dataset import Dataset
 
