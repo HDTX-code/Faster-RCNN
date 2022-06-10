@@ -209,7 +209,7 @@ def main(args):
             val_map.append(coco_info[1])  # pascal mAP
 
             if len(val_map) > 1:
-                if val_map[-1] > val_map[-2]:
+                if val_map[-1] > max(val_map[:-2]):
                     torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                     print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
             else:
@@ -217,7 +217,7 @@ def main(args):
                 print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
         else:
             if len(train_loss) > 1:
-                if train_loss[-1] < train_loss[-2]:
+                if train_loss[-1] < min(train_loss[:-2]):
                     torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                     print("Save best loss {:.4f}".format(train_loss[-1]))
                 else:
