@@ -208,13 +208,21 @@ def main(args):
 
             val_map.append(coco_info[1])  # pascal mAP
 
-            if val_map[-1] > val_map[-2] or len(val_map) == 1:
+            if len(val_map) > 1:
+                if val_map[-1] > val_map[-2]:
+                    torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                    print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
+            else:
                 torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                 print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
         else:
-            if train_loss[-1] < train_loss[-2] or len(train_loss) == 1:
-                torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
-                print("Save best loss {:.4f}".format(train_loss[-1]))
+            if len(train_loss) > 1:
+                if train_loss[-1] < train_loss[-2]:
+                    torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                    print("Save best loss {:.4f}".format(train_loss[-1]))
+                else:
+                    torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                    print("Save best loss {:.4f}".format(train_loss[-1]))
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         plot_loss_and_lr(train_loss, learning_rate, log_dir)
