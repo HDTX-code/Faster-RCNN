@@ -1,2 +1,4 @@
 weights
 *.txt
+data
+*.out

@@ -109,7 +109,7 @@ def main(args):
                                           collate_fn=val_dataset.collate_fn)
 
     # model初始化
-    model = get_model(backbone, num_classes, model_path=model_path, pretrained=pretrained).to(device)
+    model = get_model(backbone, num_classes + 1, model_path=model_path, pretrained=pretrained).to(device)
 
     # 打印训练参数
     show_config(backbone=backbone, num_classes=num_classes, model_path=model_path, Init_Epoch=Init_Epoch,
@@ -179,7 +179,7 @@ def main(args):
     # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     for param in model.backbone.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
     params = [p for p in model.parameters() if p.requires_grad]
 
     #   根据optimizer_type选择优化器
@@ -208,13 +208,21 @@ def main(args):
 
             val_map.append(coco_info[1])  # pascal mAP
 
-            if val_map[-1] > val_map[-2]:
+            if len(val_map) > 1:
+                if val_map[-1] > val_map[-2]:
+                    torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                    print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
+            else:
                 torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                 print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
         else:
-            if train_loss[-1] < train_loss[-2]:
-                torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
-                print("Save best loss {:.4f}".format(train_loss[-1]))
+            if len(train_loss) > 1:
+                if train_loss[-1] < train_loss[-2]:
+                    torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                    print("Save best loss {:.4f}".format(train_loss[-1]))
+                else:
+                    torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                    print("Save best loss {:.4f}".format(train_loss[-1]))
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         plot_loss_and_lr(train_loss, learning_rate, log_dir)
@@ -228,10 +236,9 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training parameter setting')
     parser.add_argument('--bb', type=str, default='resnet50_fpn', help='backbone')
-    parser.add_argument('--cp', type=str, default=r"weights/voc_classes.txt",
-                        help='classes_path')
+    parser.add_argument('--cp', type=str, default=r"weights/voc_classes.txt", help='classes_path')
     parser.add_argument('--sd', type=str, default="weights", help='save_dir')
-    parser.add_argument('--mp', type=str, default="weights/pre/resnet50_fpn.pth", help='model_path')
+    parser.add_argument('--mp', type=str, default="", help='model_path')
     parser.add_argument('--GPU', type=int, default=5, help='GPU_ID')
     parser.add_argument('--train', type=str, default=r"weights/train.txt", help="train_txt_path")
     parser.add_argument('--val', type=str, default=r"weights/val.txt", help="val_txt_path")
@@ -246,9 +253,9 @@ if __name__ == '__main__':
     parser.add_argument('--m', type=float, default=0.9, help="momentum")
     parser.add_argument('--wd', type=float, default=0, help="weight_decay，adam is 0")
     parser.add_argument('--fe', type=int, default=18, help="Freeze_Epoch")
-    parser.add_argument('--ufe', type=int, default=82, help="UnFreeze_Epoch")
+    parser.add_argument('--ufe', type=int, default=32, help="UnFreeze_Epoch")
     parser.add_argument('--ie', type=int, default=0, help="Init_Epoch")
-    parser.add_argument('--pf', default=20, type=int, help="print_freq")
+    parser.add_argument('--pf', default=100, type=int, help="print_freq")
     parser.add_argument('--ef', default=False, action='store_true', help="Whether to calculate map during training")
     parser.add_argument('--pre', default=False, action='store_true', help="pretrained")
     parser.add_argument('--amp', default=False, action='store_true', help="amp or Not")

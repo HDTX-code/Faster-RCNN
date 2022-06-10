@@ -20,7 +20,7 @@ def convert_annotation(year, image_id, list_file):
         cls = obj.find('name').text
         if cls not in classes or int(difficult) == 1:
             continue
-        cls_id = classes.index(cls)
+        cls_id = classes.index(cls) + 1
         xmlbox = obj.find('bndbox')
         b = (int(float(xmlbox.find('xmin').text)), int(float(xmlbox.find('ymin').text)),
              int(float(xmlbox.find('xmax').text)), int(float(xmlbox.find('ymax').text)))
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument('--sp', type=str, default=r"./weights", help='save_path')
     parser.add_argument('--tvt', type=float, default=1, help='trainval_percent')
     parser.add_argument('--t', type=float, default=0.9, help='train_percent')
-    parser.add_argument('--pp', type=float, default=0.5, help='photo_per')
+    parser.add_argument('--pp', type=float, default=1, help='photo_per')
     parser.add_argument('--voc_p', type=str, default=r"data/VOCdevkit",
                         help='VOCdevkit_path')
     args = parser.parse_args()
