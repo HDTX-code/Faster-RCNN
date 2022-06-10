@@ -5,7 +5,7 @@
       <paths name="atr2@192.168.153.213:22">
         <serverdata>
           <mappings>
-            <mapping deploy="/homefun/zhf/faster_rcnn/faster_rcnn" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/Home/atr2/homefun/zhf/faster_rcnn/faster_rcnn" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
