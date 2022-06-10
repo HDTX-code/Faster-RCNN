@@ -41,6 +41,8 @@ def main(args):
     train_batch_sampler = None
     # num_classes class_names
     class_names, num_classes = get_classes(args.cp)
+    max_map = 0
+    min_loss = 1e3
     # 混合精度
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
     # 参数传递
@@ -209,20 +211,22 @@ def main(args):
             val_map.append(coco_info[1])  # pascal mAP
 
             if len(val_map) > 1:
-                if val_map[-1] > max(val_map[:-2]):
+                if val_map[-1] > max_map:
                     torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                     print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
+                    max_map = val_map[-1]
             else:
                 torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                 print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
         else:
             if len(train_loss) > 1:
-                if train_loss[-1] < min(train_loss[:-2]):
+                if train_loss[-1] < min_loss:
                     torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                     print("Save best loss {:.4f}".format(train_loss[-1]))
-                else:
-                    torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
-                    print("Save best loss {:.4f}".format(train_loss[-1]))
+                    min_loss = train_loss[-1]
+            else:
+                torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                print("Save best loss {:.4f}".format(train_loss[-1]))
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         plot_loss_and_lr(train_loss, learning_rate, log_dir)
