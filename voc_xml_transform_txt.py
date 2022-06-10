@@ -20,7 +20,7 @@ def convert_annotation(year, image_id, list_file):
         cls = obj.find('name').text
         if cls not in classes or int(difficult) == 1:
             continue
-        cls_id = classes.index(cls)
+        cls_id = classes.index(cls) + 1
         xmlbox = obj.find('bndbox')
         b = (int(float(xmlbox.find('xmin').text)), int(float(xmlbox.find('ymin').text)),
              int(float(xmlbox.find('xmax').text)), int(float(xmlbox.find('ymax').text)))

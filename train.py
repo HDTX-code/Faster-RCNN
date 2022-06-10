@@ -179,7 +179,7 @@ def main(args):
     # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     for param in model.backbone.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
     params = [p for p in model.parameters() if p.requires_grad]
 
     #   根据optimizer_type选择优化器
@@ -208,11 +208,11 @@ def main(args):
 
             val_map.append(coco_info[1])  # pascal mAP
 
-            if val_map[-1] > val_map[-2]:
+            if val_map[-1] > val_map[-2] or len(val_map) == 1:
                 torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                 print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
         else:
-            if train_loss[-1] < train_loss[-2]:
+            if train_loss[-1] < train_loss[-2] or len(train_loss) == 1:
                 torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
                 print("Save best loss {:.4f}".format(train_loss[-1]))
     # plot loss and lr curve
@@ -228,10 +228,9 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training parameter setting')
     parser.add_argument('--bb', type=str, default='resnet50_fpn', help='backbone')
-    parser.add_argument('--cp', type=str, default=r"weights/voc_classes.txt",
-                        help='classes_path')
+    parser.add_argument('--cp', type=str, default=r"weights/voc_classes.txt", help='classes_path')
     parser.add_argument('--sd', type=str, default="weights", help='save_dir')
-    parser.add_argument('--mp', type=str, default="weights/loss_20220610000615/resnet50_fpn.pth", help='model_path')
+    parser.add_argument('--mp', type=str, default="", help='model_path')
     parser.add_argument('--GPU', type=int, default=5, help='GPU_ID')
     parser.add_argument('--train', type=str, default=r"weights/train.txt", help="train_txt_path")
     parser.add_argument('--val', type=str, default=r"weights/val.txt", help="val_txt_path")
