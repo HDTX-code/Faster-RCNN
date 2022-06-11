@@ -6,7 +6,6 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from utils.group_by_aspect_ratio import create_aspect_ratio_groups, GroupedBatchSampler
 from backbone.creat_model import get_model
 from utils.plot_curve import plot_loss_and_lr, plot_map
 from utils.train_one_epoch import train_one_epoch, evaluate
@@ -153,7 +152,7 @@ def main(args):
         'sgd': optim.SGD(params, Init_lr_fit_Freeze, momentum=momentum, nesterov=True, weight_decay=weight_decay)
     }[optimizer_type_Freeze]
 
-    for epoch in range(1, Freeze_Epoch + 1):
+    for epoch in range(Init_Epoch + 1, Freeze_Epoch + 1):
         set_optimizer_lr(optimizer, lr_scheduler_func_Freeze, epoch - 1)
         mean_loss, lr = train_one_epoch(model, optimizer, gen_Freeze, device, epoch,
                                         print_freq=int((num_train/Freeze_batch_size)//5), scaler=scaler)
@@ -173,6 +172,16 @@ def main(args):
 
             val_map.append(coco_info[1])  # pascal mAP
 
+            if val_map[-1] > max_map:
+                torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                print("Save best map {:.3f} and loss {:.4f}".format(val_map[-1], train_loss[-1]))
+                max_map = val_map[-1]
+        else:
+            if train_loss[-1] < min_loss:
+                torch.save(model.state_dict(), os.path.join(log_dir, "{}.pth".format(backbone)))
+                print("Save best loss {:.4f}".format(train_loss[-1]))
+                min_loss = train_loss[-1]
+
     # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     #  second unfrozen backbone and train all network     #
     #  解冻前置特征提取网络权重（backbone），接着训练整个网络权重  #
@@ -189,8 +198,12 @@ def main(args):
     }[optimizer_type_UnFreeze]
 
     # 解冻训练
-    for epoch in range(Freeze_Epoch + 1, UnFreeze_Epoch + Freeze_Epoch + 1):
-        set_optimizer_lr(optimizer, lr_scheduler_func_UnFreeze, epoch - Freeze_Epoch + 1)
+    if Freeze_Epoch == 0:
+        UnFreeze_start_Epoch = Init_Epoch + 1
+    else:
+        UnFreeze_start_Epoch = Freeze_Epoch + 1
+    for epoch in range(UnFreeze_start_Epoch, UnFreeze_Epoch + Freeze_Epoch + 1):
+        set_optimizer_lr(optimizer, lr_scheduler_func_UnFreeze, epoch - UnFreeze_start_Epoch)
         mean_loss, lr = train_one_epoch(model, optimizer, gen_UnFreeze, device, epoch,
                                         print_freq=int((num_train/UnFreeze_batch_size)//5), scaler=scaler)
         train_loss.append(mean_loss.item())

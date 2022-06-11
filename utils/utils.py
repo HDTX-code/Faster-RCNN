@@ -146,7 +146,7 @@ def get_lr(optimizer):
 
 
 # ---------------------------------------------------#
-#   获得类
+#   获得高宽分类间隔抽取
 # ---------------------------------------------------#
 def get_dataloader_with_aspect_ratio_group(train_dataset, aspect_ratio_group_factor, batch_size, num_workers):
     train_sampler = torch.utils.data.RandomSampler(train_dataset)
@@ -162,3 +162,4 @@ def get_dataloader_with_aspect_ratio_group(train_dataset, aspect_ratio_group_fac
                                       num_workers=num_workers,
                                       collate_fn=train_dataset.collate_fn)
     return gen
+
