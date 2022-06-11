@@ -10,7 +10,8 @@ from utils.group_by_aspect_ratio import create_aspect_ratio_groups, GroupedBatch
 from backbone.creat_model import get_model
 from utils.plot_curve import plot_loss_and_lr, plot_map
 from utils.train_one_epoch import train_one_epoch, evaluate
-from utils.utils import show_config, get_dataset, get_classes, set_optimizer_lr, get_lr_fun
+from utils.utils import show_config, get_dataset, get_classes, set_optimizer_lr, get_lr_fun, \
+    get_dataloader_with_aspect_ratio_group
 
 
 def main(args):
@@ -38,8 +39,7 @@ def main(args):
     num_workers = min(min([os.cpu_count(), args.bs if args.bs > 1 else 0, 8]), args.nw)  # number of workers
     # 按图片相似高宽比采样区间数 采样器
     aspect_ratio_group_factor = args.argf
-    train_batch_sampler = None
-    # num_classes class_names
+    # num_classes class_names max_map min_loss 初始化
     class_names, num_classes = get_classes(args.cp)
     max_map = 0
     min_loss = 1e3
@@ -51,7 +51,6 @@ def main(args):
     Init_Epoch = float(args.ie)
     Freeze_Epoch = int(args.fe)
     UnFreeze_Epoch = int(args.ufe)
-    batch_size = int(args.bs)
     Freeze_Train = True if args.ufe != 0 else False,
     Init_lr = float(args.ilr)
     Min_lr = float(args.ilr) * 0.01
@@ -64,6 +63,8 @@ def main(args):
     eval_flag = bool(args.ef)
     weight_decay = int(args.wd)
     print_freq = int(args.pf)
+    Freeze_batch_size = int(args.fbs)
+    UnFreeze_batch_size = int(args.ufbs)
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     #                 dataset dataloader model                    #
@@ -80,29 +81,26 @@ def main(args):
                                              class_names=class_names, train=True), get_dataset(val_lines,
                                                                                                class_names=class_names,
                                                                                                train=False)
+
     # 是否按图片相似高宽比采样图片组成batch, 使用的话能够减小训练时所需GPU显存，默认使用
-    if aspect_ratio_group_factor >= 0:
-        train_sampler = torch.utils.data.RandomSampler(train_dataset)
-        # 统计所有图像高宽比例在bins区间中的位置索引
-        group_ids = create_aspect_ratio_groups(train_dataset, k=aspect_ratio_group_factor)
-        # 每个batch图片从同一高宽比例区间中取
-        train_batch_sampler = GroupedBatchSampler(train_sampler, group_ids, batch_size)
-
-    if train_batch_sampler is not None:
-        # 如果按照图片高宽比采样图片，dataloader中需要使用batch_sampler
-        gen = torch.utils.data.DataLoader(train_dataset,
-                                          batch_sampler=train_batch_sampler,
-                                          pin_memory=True,
-                                          num_workers=num_workers,
-                                          collate_fn=train_dataset.collate_fn)
+    if aspect_ratio_group_factor != -1:
+        gen_Freeze = get_dataloader_with_aspect_ratio_group(train_dataset, aspect_ratio_group_factor,
+                                                            Freeze_batch_size, num_workers)
+        gen_UnFreeze = get_dataloader_with_aspect_ratio_group(train_dataset, aspect_ratio_group_factor,
+                                                              UnFreeze_batch_size, num_workers)
     else:
-        gen = torch.utils.data.DataLoader(train_dataset,
-                                          batch_size=batch_size,
-                                          shuffle=True,
-                                          pin_memory=True,
-                                          num_workers=num_workers,
-                                          collate_fn=train_dataset.collate_fn)
-
+        gen_Freeze = torch.utils.data.DataLoader(train_dataset,
+                                                 batch_size=Freeze_batch_size,
+                                                 shuffle=True,
+                                                 pin_memory=True,
+                                                 num_workers=num_workers,
+                                                 collate_fn=train_dataset.collate_fn)
+        gen_UnFreeze = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=UnFreeze_batch_size,
+                                                   shuffle=True,
+                                                   pin_memory=True,
+                                                   num_workers=num_workers,
+                                                   collate_fn=train_dataset.collate_fn)
     gen_val = torch.utils.data.DataLoader(val_dataset,
                                           batch_size=1,
                                           shuffle=False,
@@ -115,22 +113,23 @@ def main(args):
 
     # 打印训练参数
     show_config(backbone=backbone, num_classes=num_classes, model_path=model_path, Init_Epoch=Init_Epoch,
-                Freeze_Epoch=Freeze_Epoch, UnFreeze_Epoch=UnFreeze_Epoch, batch_size=batch_size,
+                Freeze_Epoch=Freeze_Epoch, UnFreeze_Epoch=UnFreeze_Epoch, Freeze_batch_size=Freeze_batch_size,
+                UnFreeze_batch_size=UnFreeze_batch_size, Cuda=Cuda, GPU=torch.cuda.current_device(),
                 Freeze_Train=Freeze_Train, Init_lr=Init_lr, Min_lr=Min_lr, optimizer_type_Freeze=optimizer_type_Freeze,
                 optimizer_type_UnFreeze=optimizer_type_UnFreeze, lr_decay_type_UnFreeze=lr_decay_type_UnFreeze,
                 lr_decay_type_Freeze=lr_decay_type_Freeze, save_dir=log_dir, num_workers=num_workers, momentum=momentum,
-                num_train=num_train, num_val=num_val, amp=args.amp, pretrained=pretrained, eval_flag=eval_flag,
-                Cuda=Cuda, GPU=torch.cuda.current_device(), print_freq=print_freq)
+                num_train=num_train, num_val=num_val, amp=args.amp, pretrained=pretrained,
+                eval_flag=eval_flag,print_freq=print_freq,)
 
     # 获取lr下降函数
     lr_scheduler_func_Freeze, Init_lr_fit_Freeze, Min_lr_fit_Freeze = get_lr_fun(optimizer_type_Freeze,
-                                                                                 batch_size,
+                                                                                 Freeze_batch_size,
                                                                                  Init_lr,
                                                                                  Min_lr,
                                                                                  Freeze_Epoch,
                                                                                  lr_decay_type_Freeze)
     lr_scheduler_func_UnFreeze, Init_lr_fit_UnFreeze, Min_lr_fit_UnFreeze = get_lr_fun(optimizer_type_UnFreeze,
-                                                                                       batch_size,
+                                                                                       UnFreeze_batch_size,
                                                                                        Init_lr,
                                                                                        Min_lr,
                                                                                        UnFreeze_Epoch,
@@ -158,7 +157,8 @@ def main(args):
 
     for epoch in range(1, Freeze_Epoch + 1):
         set_optimizer_lr(optimizer, lr_scheduler_func_Freeze, epoch - 1)
-        mean_loss, lr = train_one_epoch(model, optimizer, gen, device, epoch, print_freq=print_freq, scaler=scaler)
+        mean_loss, lr = train_one_epoch(model, optimizer, gen_Freeze, device, epoch,
+                                        print_freq=print_freq, scaler=scaler)
         train_loss.append(mean_loss.item())
         learning_rate.append(lr)
 
@@ -193,7 +193,8 @@ def main(args):
     # 解冻训练
     for epoch in range(Freeze_Epoch + 1, UnFreeze_Epoch + Freeze_Epoch + 1):
         set_optimizer_lr(optimizer, lr_scheduler_func_UnFreeze, epoch - Freeze_Epoch + 1)
-        mean_loss, lr = train_one_epoch(model, optimizer, gen, device, epoch, print_freq=print_freq, scaler=scaler)
+        mean_loss, lr = train_one_epoch(model, optimizer, gen_UnFreeze, device, epoch,
+                                        print_freq=print_freq, scaler=scaler)
         train_loss.append(mean_loss.item())
         learning_rate.append(lr)
 
@@ -241,7 +242,8 @@ if __name__ == '__main__':
     parser.add_argument('--val', type=str, default=r"weights/val.txt", help="val_txt_path")
     parser.add_argument('--opt_t_F', type=str, default='adam', help="optimizer_type_Freeze")
     parser.add_argument('--opt_t_UnF', type=str, default='adam', help="optimizer_type_UnFreeze")
-    parser.add_argument('--bs', type=int, default=28, help="batch_size")
+    parser.add_argument('--fbs', type=int, default=14, help="Freeze_batch_size")
+    parser.add_argument('--ufbs', type=int, default=28, help="UnFreeze_batch_size")
     parser.add_argument('--argf', type=int, default=3, help="aspect_ratio_group_factor")
     parser.add_argument('--lr_d_t_F', type=str, default='cos', help="lr_decay_type_Freeze,'step' or 'cos'")
     parser.add_argument('--lr_d_t_UnF', type=str, default='cos', help="lr_decay_type_UnFreeze,'step' or 'cos'")
