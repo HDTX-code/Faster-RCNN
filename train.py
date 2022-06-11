@@ -36,7 +36,7 @@ def main(args):
     torch.cuda.set_device(args.GPU)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # num_workers
-    num_workers = min(min([os.cpu_count(), args.bs if args.bs > 1 else 0, 8]), args.nw)  # number of workers
+    num_workers = min(min([os.cpu_count(), args.fbs if args.fbs > 1 else 0, 8]), args.nw)  # number of workers
     # 按图片相似高宽比采样区间数 采样器
     aspect_ratio_group_factor = args.argf
     # num_classes class_names max_map min_loss 初始化
@@ -48,7 +48,7 @@ def main(args):
     # 参数传递
     backbone = str(args.bb)
     model_path = str(args.mp)
-    Init_Epoch = float(args.ie)
+    Init_Epoch = int(args.ie)
     Freeze_Epoch = int(args.fe)
     UnFreeze_Epoch = int(args.ufe)
     Freeze_Train = True if args.ufe != 0 else False,
@@ -62,7 +62,6 @@ def main(args):
     pretrained = bool(args.pre)
     eval_flag = bool(args.ef)
     weight_decay = int(args.wd)
-    print_freq = int(args.pf)
     Freeze_batch_size = int(args.fbs)
     UnFreeze_batch_size = int(args.ufbs)
 
@@ -118,8 +117,7 @@ def main(args):
                 Freeze_Train=Freeze_Train, Init_lr=Init_lr, Min_lr=Min_lr, optimizer_type_Freeze=optimizer_type_Freeze,
                 optimizer_type_UnFreeze=optimizer_type_UnFreeze, lr_decay_type_UnFreeze=lr_decay_type_UnFreeze,
                 lr_decay_type_Freeze=lr_decay_type_Freeze, save_dir=log_dir, num_workers=num_workers, momentum=momentum,
-                num_train=num_train, num_val=num_val, amp=args.amp, pretrained=pretrained,
-                eval_flag=eval_flag,print_freq=print_freq,)
+                num_train=num_train, num_val=num_val, amp=args.amp, pretrained=pretrained, eval_flag=eval_flag)
 
     # 获取lr下降函数
     lr_scheduler_func_Freeze, Init_lr_fit_Freeze, Min_lr_fit_Freeze = get_lr_fun(optimizer_type_Freeze,
@@ -158,7 +156,7 @@ def main(args):
     for epoch in range(1, Freeze_Epoch + 1):
         set_optimizer_lr(optimizer, lr_scheduler_func_Freeze, epoch - 1)
         mean_loss, lr = train_one_epoch(model, optimizer, gen_Freeze, device, epoch,
-                                        print_freq=print_freq, scaler=scaler)
+                                        print_freq=int((num_train/Freeze_batch_size)//5), scaler=scaler)
         train_loss.append(mean_loss.item())
         learning_rate.append(lr)
 
@@ -194,7 +192,7 @@ def main(args):
     for epoch in range(Freeze_Epoch + 1, UnFreeze_Epoch + Freeze_Epoch + 1):
         set_optimizer_lr(optimizer, lr_scheduler_func_UnFreeze, epoch - Freeze_Epoch + 1)
         mean_loss, lr = train_one_epoch(model, optimizer, gen_UnFreeze, device, epoch,
-                                        print_freq=print_freq, scaler=scaler)
+                                        print_freq=int((num_train/UnFreeze_batch_size)//5), scaler=scaler)
         train_loss.append(mean_loss.item())
         learning_rate.append(lr)
 
@@ -242,8 +240,8 @@ if __name__ == '__main__':
     parser.add_argument('--val', type=str, default=r"weights/val.txt", help="val_txt_path")
     parser.add_argument('--opt_t_F', type=str, default='adam', help="optimizer_type_Freeze")
     parser.add_argument('--opt_t_UnF', type=str, default='adam', help="optimizer_type_UnFreeze")
-    parser.add_argument('--fbs', type=int, default=14, help="Freeze_batch_size")
-    parser.add_argument('--ufbs', type=int, default=28, help="UnFreeze_batch_size")
+    parser.add_argument('--fbs', type=int, default=12, help="Freeze_batch_size")
+    parser.add_argument('--ufbs', type=int, default=24, help="UnFreeze_batch_size")
     parser.add_argument('--argf', type=int, default=3, help="aspect_ratio_group_factor")
     parser.add_argument('--lr_d_t_F', type=str, default='cos', help="lr_decay_type_Freeze,'step' or 'cos'")
     parser.add_argument('--lr_d_t_UnF', type=str, default='cos', help="lr_decay_type_UnFreeze,'step' or 'cos'")
@@ -251,10 +249,9 @@ if __name__ == '__main__':
     parser.add_argument('--ilr', type=float, default=1e-4, help="max lr")
     parser.add_argument('--m', type=float, default=0.9, help="momentum")
     parser.add_argument('--wd', type=float, default=0, help="weight_decay，adam is 0")
-    parser.add_argument('--fe', type=int, default=18, help="Freeze_Epoch")
-    parser.add_argument('--ufe', type=int, default=32, help="UnFreeze_Epoch")
+    parser.add_argument('--fe', type=int, default=12, help="Freeze_Epoch")
+    parser.add_argument('--ufe', type=int, default=24, help="UnFreeze_Epoch")
     parser.add_argument('--ie', type=int, default=0, help="Init_Epoch")
-    parser.add_argument('--pf', default=100, type=int, help="print_freq")
     parser.add_argument('--ef', default=False, action='store_true', help="Whether to calculate map during training")
     parser.add_argument('--pre', default=False, action='store_true', help="pretrained")
     parser.add_argument('--amp', default=False, action='store_true', help="amp or Not")

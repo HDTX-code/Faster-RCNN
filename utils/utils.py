@@ -149,7 +149,6 @@ def get_lr(optimizer):
 #   获得类
 # ---------------------------------------------------#
 def get_dataloader_with_aspect_ratio_group(train_dataset, aspect_ratio_group_factor, batch_size, num_workers):
-    # 是否按图片相似高宽比采样图片组成batch, 使用的话能够减小训练时所需GPU显存，默认使用
     train_sampler = torch.utils.data.RandomSampler(train_dataset)
     # 统计所有图像高宽比例在bins区间中的位置索引
     group_ids = create_aspect_ratio_groups(train_dataset, k=aspect_ratio_group_factor)
@@ -163,6 +162,3 @@ def get_dataloader_with_aspect_ratio_group(train_dataset, aspect_ratio_group_fac
                                       num_workers=num_workers,
                                       collate_fn=train_dataset.collate_fn)
     return gen
-
-    # else:
-
