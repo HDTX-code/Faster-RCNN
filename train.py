@@ -36,7 +36,7 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # num_workers
     num_workers = min(min([os.cpu_count(), args.fbs if args.fbs > 1 else 0, 8]), args.nw)  # number of workers
-    # 按图片相似高宽比采样区间数 采样器
+    # 按图片相似高宽比采样区间数 采样器(为-1表示不进行此项操作)
     aspect_ratio_group_factor = args.argf
     # num_classes class_names max_map min_loss 初始化
     class_names, num_classes = get_classes(args.cp)
