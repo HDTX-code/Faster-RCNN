@@ -181,7 +181,7 @@ def main(args):
     print(print_voc)
 
     # 将验证结果保存至txt文件中
-    with open(os.path.join(args.save_dir, "weights/loss_20220611221726/record_mAP.txt"), "w") as f:
+    with open(os.path.join(args.save_dir, "record_mAP.txt"), "w") as f:
         record_lines = ["mAP(IoU=0.5) for each category:",
                         print_voc]
         f.write("\n".join(record_lines))
