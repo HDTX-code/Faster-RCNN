@@ -5,7 +5,7 @@
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/weights" />
     </content>
-    <orderEntry type="jdk" jdkName="Remote Python 3.7.0 (sftp://atr2@192.168.153.213:22/Home/atr2/miniconda3/envs/homefun/bin/python3.7)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Remote Python 3.7.0 (sftp://atr2@192.168.153.149:22/Home/atr2/miniconda3/envs/homefun/bin/python3.7)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
