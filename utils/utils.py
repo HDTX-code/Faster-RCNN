@@ -123,13 +123,17 @@ def set_optimizer_lr(optimizer, lr_scheduler_func, epoch):
 # ---------------------------------------------------#
 #   lr 下降函数
 # ---------------------------------------------------#
-def get_lr_fun(optimizer_type, batch_size, Init_lr, Min_lr, Epoch, lr_decay_type):
+def get_lr_fun(optimizer_type, batch_size, Init_lr, Min_lr, Epoch, lr_decay_type, isUnFreeze=False):
     # 判断当前batch_size，自适应调整学习率
-    nbs = 16
-    lr_limit_max = 1e-4 if optimizer_type == 'adam' else 5e-2
-    lr_limit_min = 1e-4 if optimizer_type == 'adam' else 5e-4
-    Init_lr_fit = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
-    Min_lr_fit = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
+    if isUnFreeze:
+        nbs = 16
+        lr_limit_max = 1e-4 if optimizer_type == 'adam' else 5e-2
+        lr_limit_min = 1e-4 if optimizer_type == 'adam' else 5e-4
+        Init_lr_fit = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
+        Min_lr_fit = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
+    else:
+        Init_lr_fit = Init_lr
+        Min_lr_fit = Min_lr
 
     #   获得学习率下降的公式
     lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr_fit, Min_lr_fit, Epoch)

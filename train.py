@@ -51,8 +51,6 @@ def main(args):
     Freeze_Epoch = int(args.fe)
     UnFreeze_Epoch = int(args.ufe)
     Freeze_Train = True if args.ufe != 0 else False,
-    Init_lr = float(args.ilr)
-    Min_lr = float(args.ilr) * 0.01
     optimizer_type_Freeze = str(args.opt_t_F)
     optimizer_type_UnFreeze = str(args.opt_t_UnF)
     momentum = float(args.m)
@@ -63,6 +61,10 @@ def main(args):
     weight_decay = int(args.wd)
     Freeze_batch_size = int(args.fbs)
     UnFreeze_batch_size = int(args.ufbs)
+    Init_lr_Freeze = float(args.Init_lr_Freeze)
+    Min_lr_Freeze = float(args.Min_lr_Freeze)
+    Init_lr_UnFreeze = float(args.Init_lr_UnFreeze)
+    Min_lr_UnFreeze = float(args.Min_lr_UnFreeze)
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     #                 dataset dataloader model                    #
@@ -113,24 +115,28 @@ def main(args):
     show_config(backbone=backbone, num_classes=num_classes, model_path=model_path, Init_Epoch=Init_Epoch,
                 Freeze_Epoch=Freeze_Epoch, UnFreeze_Epoch=UnFreeze_Epoch, Freeze_batch_size=Freeze_batch_size,
                 UnFreeze_batch_size=UnFreeze_batch_size, Cuda=Cuda, GPU=torch.cuda.current_device(),
-                Freeze_Train=Freeze_Train, Init_lr=Init_lr, Min_lr=Min_lr, optimizer_type_Freeze=optimizer_type_Freeze,
+                Freeze_Train=Freeze_Train, optimizer_type_Freeze=optimizer_type_Freeze,
                 optimizer_type_UnFreeze=optimizer_type_UnFreeze, lr_decay_type_UnFreeze=lr_decay_type_UnFreeze,
                 lr_decay_type_Freeze=lr_decay_type_Freeze, save_dir=log_dir, num_workers=num_workers, momentum=momentum,
-                num_train=num_train, num_val=num_val, amp=args.amp, pretrained=pretrained, eval_flag=eval_flag)
+                num_train=num_train, num_val=num_val, amp=args.amp, pretrained=pretrained, eval_flag=eval_flag,
+                Init_lr_Freeze=Init_lr_Freeze, Min_lr_Freeze=Min_lr_Freeze, Init_lr_UnFreeze=Init_lr_UnFreeze,
+                Min_lr_UnFreeze=Min_lr_UnFreeze)
 
     # 获取lr下降函数
     lr_scheduler_func_Freeze, Init_lr_fit_Freeze, Min_lr_fit_Freeze = get_lr_fun(optimizer_type_Freeze,
                                                                                  Freeze_batch_size,
-                                                                                 Init_lr,
-                                                                                 Min_lr,
+                                                                                 Init_lr_Freeze,
+                                                                                 Min_lr_Freeze,
                                                                                  Freeze_Epoch,
-                                                                                 lr_decay_type_Freeze)
+                                                                                 lr_decay_type_Freeze,
+                                                                                 isUnFreeze=False)
     lr_scheduler_func_UnFreeze, Init_lr_fit_UnFreeze, Min_lr_fit_UnFreeze = get_lr_fun(optimizer_type_UnFreeze,
                                                                                        UnFreeze_batch_size,
-                                                                                       Init_lr,
-                                                                                       Min_lr,
+                                                                                       Init_lr_UnFreeze,
+                                                                                       Min_lr_UnFreeze,
                                                                                        UnFreeze_Epoch,
-                                                                                       lr_decay_type_UnFreeze)
+                                                                                       lr_decay_type_UnFreeze,
+                                                                                       isUnFreeze=True)
     # 记录loss lr map
     train_loss = []
     learning_rate = []
@@ -259,7 +265,10 @@ if __name__ == '__main__':
     parser.add_argument('--lr_d_t_F', type=str, default='cos', help="lr_decay_type_Freeze,'step' or 'cos'")
     parser.add_argument('--lr_d_t_UnF', type=str, default='cos', help="lr_decay_type_UnFreeze,'step' or 'cos'")
     parser.add_argument('--nw', type=int, default=24, help="num_workers")
-    parser.add_argument('--ilr', type=float, default=1e-4, help="max lr")
+    parser.add_argument('--Init_lr_Freeze', type=float, default=1e-4, help="max lr Freeze")
+    parser.add_argument('--Min_lr_Freeze', type=float, default=6e-5, help="min lr Freeze")
+    parser.add_argument('--Init_lr_UnFreeze', type=float, default=1e-4, help="max lr UnFreeze")
+    parser.add_argument('--Min_lr_UnFreeze', type=float, default=1e-6, help="min lr Freeze")
     parser.add_argument('--m', type=float, default=0.9, help="momentum")
     parser.add_argument('--wd', type=float, default=0, help="weight_decay，adam is 0")
     parser.add_argument('--fe', type=int, default=12, help="Freeze_Epoch")
