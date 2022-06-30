@@ -76,7 +76,7 @@ def main(args):
         plt.imshow(plot_img)
         plt.show()
         # 保存预测的图片结果
-        plot_img.save(os.path.join(args.save_dir, "test_result.jpg"))
+        plot_img.save(os.path.join(args.save_dir, "test_result_{}.jpg".format(args.backbone)))
 
 
 if __name__ == '__main__':
@@ -88,8 +88,8 @@ if __name__ == '__main__':
     parser.add_argument("--backbone", type=str, default="resnet50")
     parser.add_argument('--weights_path', default='weights/loss_20220611221726/resnet50.pth', type=str,
                         help='training weights')
-    parser.add_argument('--pic_path', default='data/VOCdevkit/VOC2007/JPEGImages/2009_003351.jpg', type=str,
+    parser.add_argument('--pic_path', default='2009_003351.jpg', type=str,
                         help='pic_path')
-    parser.add_argument('--save_dir', type=str, default="weights/loss_20220611221726", help='save_dir')
+    parser.add_argument('--save_dir', type=str, default="./", help='save_dir')
     args = parser.parse_args()
     main(args)

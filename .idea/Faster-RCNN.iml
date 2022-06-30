@@ -5,7 +5,7 @@
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/weights" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.8 (Env-1)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (ENV-1)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
