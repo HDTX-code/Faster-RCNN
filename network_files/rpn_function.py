@@ -142,7 +142,7 @@ class AnchorsGenerator(nn.Module):
             # 计算预测特征矩阵上每个点对应原图上的坐标(anchors模板的坐标偏移量)
             # torch.meshgrid函数分别传入行坐标和列坐标，生成网格行坐标矩阵和网格列坐标矩阵
             # shape: [grid_height, grid_width]
-            shift_y, shift_x = torch.meshgrid(shifts_y, shifts_x)
+            shift_y, shift_x = torch.meshgrid(shifts_y, shifts_x, indexing='ij')
             shift_x = shift_x.reshape(-1)
             shift_y = shift_y.reshape(-1)
 

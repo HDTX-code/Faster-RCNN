@@ -207,7 +207,7 @@ class MetricLogger(object):
             iter_time.update(time.time() - end)
             if i % print_freq == 0 or i == len(iterable) - 1:
                 eta_second = iter_time.global_avg * (len(iterable) - i)
-                eta_string = str(datetime.timedelta(seconds=eta_second))
+                eta_string = str(datetime.timedelta(seconds=int(eta_second)))
                 if torch.cuda.is_available():
                     print(log_msg.format(i, len(iterable),
                                          eta=eta_string,
