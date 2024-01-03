@@ -207,7 +207,7 @@ def main(args):
                 if args.amp:
                     save_files["scaler"] = scaler.state_dict()
                 save_on_master(save_files,
-                            os.path.join(args.output_dir, f'model_{epoch}.pth'))
+                            os.path.join(args.output_dir, 'model_{}.pth'.format(coco_info[1])))
                 best_map = coco_info[1]
 
     total_time = time.time() - start_time
