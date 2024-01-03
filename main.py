@@ -57,8 +57,8 @@ def get_args_parser():
     
     # dataset parameters
     parser.add_argument('--dataset_file', default='voc')
-    parser.add_argument('--coco_path', default="/data/home/homefun/DATA/voc/VOCdevkit/VOC2012", type=str)
-    parser.add_argument('--data_path', default="/data/home/homefun/DATA/voc/VOCdevkit/VOC2012", type=str)
+    parser.add_argument('--coco_path', default="/data/home/homefun/DATA/voc/VOCdevkit/VOCtest", type=str)
+    parser.add_argument('--data_path', default="/data/home/homefun/DATA/voc/VOCdevkit/VOCtest", type=str)
     parser.add_argument('--cam_path', default="/data/home/homefun/weights/CAM/campic/gradcam", type=str)
     parser.add_argument('--coco_panoptic_path', type=str)
     parser.add_argument('--remove_difficult', action='store_true')
@@ -79,6 +79,7 @@ def get_args_parser():
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+    parser.add_argument("--sync-bn", dest="sync_bn", help="Use sync batch norm", type=bool, default=False)
     return parser
 
 def create_model(args):
@@ -123,12 +124,12 @@ def main(args):
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
         sampler_val = torch.utils.data.SequentialSampler(dataset_val)
 
-    if args.aspect_ratio_group_factor >= 0:
-        # 统计所有图像比例在bins区间中的位置索引
-        group_ids = create_aspect_ratio_groups(dataset_train, k=args.aspect_ratio_group_factor)
-        train_batch_sampler = GroupedBatchSampler(sampler_train, group_ids, args.batch_size)
-    else:
-        train_batch_sampler = torch.utils.data.BatchSampler(
+    # if args.aspect_ratio_group_factor >= 0:
+    #     # 统计所有图像比例在bins区间中的位置索引
+    #     group_ids = create_aspect_ratio_groups(dataset_train, k=args.aspect_ratio_group_factor)
+    #     train_batch_sampler = GroupedBatchSampler(sampler_train, group_ids, args.batch_size)
+    # else:
+    train_batch_sampler = torch.utils.data.BatchSampler(
             sampler_train, args.batch_size, drop_last=True)
 
     data_loader_train = DataLoader(dataset_train, batch_sampler=train_batch_sampler,
@@ -195,7 +196,7 @@ def main(args):
         save_ap_ar(coco_info, writer, epoch) # pascal mAP
 
         if args.output_dir:
-            if coco_info[1] > best_map or epoch == args.epoch - 1:
+            if coco_info[1] > best_map or epoch == args.epochs - 1:
                 # 只在主节点上执行保存权重操作
                 save_files = {
                     'model': model_without_ddp.state_dict(),

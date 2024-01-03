@@ -1,6 +1,5 @@
 from .group_by_aspect_ratio import GroupedBatchSampler, create_aspect_ratio_groups
 from .distributed_utils import init_distributed_mode, save_on_master, mkdir
-from .coco_utils import get_coco_api_from_dataset
 from .coco_eval import CocoEvaluator
 from .coco import build_voc, build
 from .trans import * 
@@ -23,15 +22,6 @@ ap_ar_list = [
                 'Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ]'
             ]
 
-
-def get_coco_api_from_dataset(dataset):
-    for _ in range(10):
-        if isinstance(dataset, torchvision.datasets.CocoDetection):
-            break
-        if isinstance(dataset, torch.utils.data.Subset):
-            dataset = dataset.dataset
-    if isinstance(dataset, torchvision.datasets.CocoDetection):
-        return dataset.coco
 
 
 def build_dataset(image_set, args):

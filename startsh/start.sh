@@ -16,7 +16,7 @@ elif [ "$dataset_file" = 'voctest' ]; then
     coco_path='/DATA/voc/VOCdevkit/VOCtest'
 fi
 
-conda activate detr
+conda activate frcnn
 
 cd ~/Faster-RCNN
 

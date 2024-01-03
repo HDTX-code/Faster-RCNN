@@ -8,47 +8,95 @@ import json
 import os
 from pathlib import Path
 import numpy as np
+from PIL import Image
 
 import torch
 import torch.utils.data
 import torch.nn.functional as F
+from torch.utils.data import Dataset
 import torchvision
 from pycocotools import mask as coco_mask
 
 from train_utils import trans as T
 
 
-class CocoDetection(torchvision.datasets.CocoDetection):
+class CocoDetection(Dataset):
     def __init__(self, img_folder, ann_file, transforms, return_masks, cam_folder=None):
-        super(CocoDetection, self).__init__(img_folder, ann_file)
+        self.img_folder = img_folder
         with open(ann_file, 'r') as file:
             self.data = json.load(file)
-        self.imagelist = {j["id"] : j["file_name"] for j in self.data['images']}
+        self.ids = [j["id"] for j in self.data['images']]
+        self.images = {j["id"] : j for j in self.data['images']}
+        self.anns = self.get_anns(self.data["annotations"])
         self.cam_folder = cam_folder
         self._transforms = transforms
-        self.prepare = ConvertCocoPolysToMask(return_masks)
-
+        
+    def __len__(self):
+        return len(self.ids)
+        
     def __getitem__(self, idx):
-        img, target = super(CocoDetection, self).__getitem__(idx)
         image_id = self.ids[idx]
-        if self.cam_folder is not None:
-            camdata = self.get_cam(image_id, target)
-        target = {'image_id': image_id, 'annotations': target}
-        img, target = self.prepare(img, target)
+        img = Image.open(os.path.join(self.img_folder, self.images[image_id]["file_name"])).convert("RGB")
+        target = self.get_tensor(self.anns[image_id])
+        # if self.cam_folder is not None:
+        #     camdata = self.get_cam(image_id, target)
         if self._transforms is not None:
             img, target = self._transforms(img, target)
-        if self.cam_folder is not None:
-            input_tensor = torch.as_tensor(camdata, dtype=torch.float32)[None, :, :, :]
-            downsampled_tensor = F.interpolate(input_tensor, size=(16, 16), mode='bilinear', align_corners=False)
-            target['camdata'] = downsampled_tensor[0, :, :, :]
+        # if self.cam_folder is not None:
+        #     input_tensor = torch.as_tensor(camdata, dtype=torch.float32)[None, :, :, :]
+        #     downsampled_tensor = F.interpolate(input_tensor, size=(16, 16), mode='bilinear', align_corners=False)
+        #     target['camdata'] = downsampled_tensor[0, :, :, :]
         return img, target
     
-    def get_cam(self, image_id, target):
-        camdata = []
-        for t in target:
-            path = os.path.join(self.cam_folder, str(self.imagelist[image_id]).split('.')[0] + "_" + str(t["category_id"] - 1) + '.npy')
-            camdata.append(np.load(path)[np.newaxis, :, :])
-        return np.concatenate(camdata, axis=0)
+    def get_anns(self, anns):
+        anndict = {}
+        for ann in anns:
+            if ann["image_id"] in anndict:
+                anndict[ann["image_id"]].append(ann)
+            else:
+                anndict[ann["image_id"]] = [ann]
+        return anndict
+    
+    # def get_cam(self, image_id, target):
+    #     camdata = []
+    #     for t in target:
+    #         path = os.path.join(self.cam_folder, str(self.images[image_id]).split('.')[0] + "_" + str(t["category_id"] - 1) + '.npy')
+    #         camdata.append(np.load(path)[np.newaxis, :, :])
+    #     return np.concatenate(camdata, axis=0)
+    
+    def get_tensor(self, targets):
+        boxes = []
+        labels = []
+        iscrowd = []
+        area = []
+        tar = {}
+        for target in targets:
+            boxes.append([float(x) for x in target["bbox"]])
+            labels.append(target["category_id"])
+            iscrowd.append(target["iscrowd"])
+            area.append(target["area"])
+        tar["boxes"] = torch.as_tensor(boxes, dtype=torch.float32)
+        tar["boxes"][:, 2:] += tar["boxes"][:, :2]
+        tar["labels"] = torch.as_tensor(labels, dtype=torch.int64)
+        tar["iscrowd"] = torch.as_tensor(iscrowd, dtype=torch.int64)
+        tar["area"] = torch.as_tensor(area, dtype=torch.int64)
+        tar["image_id"] = torch.tensor([target["image_id"]])
+        return tar
+    
+    def coco_index(self, idx):
+        """
+        该方法是专门为pycocotools统计标签信息准备，不对图像和标签作任何处理
+        由于不用去读取图片，可大幅缩减统计时间
+
+        Args:
+            idx: 输入需要获取图像的索引
+        """
+        image_id = self.ids[idx]
+        target = self.get_tensor(self.anns[image_id])
+        data_height = int(self.images[image_id]["height"])
+        data_width = int(self.images[image_id]["width"])
+
+        return (data_height, data_width), target
         
 
 
@@ -176,21 +224,11 @@ def make_voc_transforms(image_set, size=800):
     if image_set == 'train':
         return T.Compose([
             T.RandomHorizontalFlip(),
-            T.RandomSelect(
-                T.RandomResize(scales, max_size=1333),
-                T.Compose([
-                    T.RandomResize([400, 500, 600]),
-                    T.RandomSizeCrop(384, 600),
-                    T.RandomResize(scales, max_size=1333),
-                ])
-            ),
-            T.Resize(size),
             normalize,
         ])
 
     if image_set == 'val':
         return T.Compose([
-            T.Resize(size),
             normalize,
         ])
 

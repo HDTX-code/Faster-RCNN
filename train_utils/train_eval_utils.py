@@ -3,8 +3,12 @@ import sys
 import time
 
 import torch
+from train_utils.coco_utils import get_coco_api_from_dataset
 
-from .coco_utils import get_coco_api_from_dataset
+
+from train_utils.trans import box_cxcywh_to_xyxy, box_xyxy_to_cxcywh
+
+
 from .coco_eval import CocoEvaluator
 import train_utils.distributed_utils as utils
 
@@ -27,7 +31,6 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
     for i, [images, targets] in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-
         # 混合精度训练上下文管理器，如果在CPU环境中不起任何作用
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             loss_dict = model(images, targets)
