@@ -196,20 +196,22 @@ def main(args):
         save_ap_ar(coco_info, writer, epoch) # pascal mAP
 
         if args.output_dir:
-            if coco_info[1] > best_map or epoch == args.epochs - 1:
-                # 只在主节点上执行保存权重操作
-                save_files = {
-                    'model': model_without_ddp.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'lr_scheduler': lr_scheduler.state_dict(),
-                    'args': args,
-                    'epoch': epoch}
-                if args.amp:
-                    save_files["scaler"] = scaler.state_dict()
+            # 只在主节点上执行保存权重操作
+            save_files = {
+                'model': model_without_ddp.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'lr_scheduler': lr_scheduler.state_dict(),
+                'args': args,
+                'epoch': epoch}
+            if args.amp:
+                save_files["scaler"] = scaler.state_dict()
+            if coco_info[1] > best_map:
                 save_on_master(save_files,
-                            os.path.join(args.output_dir, 'model_{}.pth'.format(coco_info[1])))
+                            os.path.join(args.output_dir, 'model_best_map.pth'))
                 best_map = coco_info[1]
-
+            if epoch == args.epochs - 1:
+                save_on_master(save_files,
+                            os.path.join(args.output_dir, 'model_last.pth'))
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))

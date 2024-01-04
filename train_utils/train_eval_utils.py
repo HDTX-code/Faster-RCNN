@@ -80,7 +80,7 @@ def evaluate(model, data_loader, device):
     iou_types = _get_iou_types(model)
     coco_evaluator = CocoEvaluator(coco, iou_types)
 
-    for image, targets in metric_logger.log_every(data_loader, 100, header):
+    for image, targets in metric_logger.log_every(data_loader, 10, header):
         image = list(img.to(device) for img in image)
 
         # 当使用CPU时，跳过GPU相关指令

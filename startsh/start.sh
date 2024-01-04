@@ -50,7 +50,6 @@ else
     if [ "$train_val" = 'train' ]; then
         CUDA_VISIBLE_DEVICES=${GPU} python main.py \
                                     --resume ${resume} \
-                                    --output_dir ~/weights/Faster-RCNN \
                                     --dataset_file ${dataset_file}\
                                     --coco_path ~${coco_path} \
                                     --data_path ~${coco_path} \
@@ -59,7 +58,6 @@ else
     else 
         CUDA_VISIBLE_DEVICES=${GPU} python main.py \
                                     --resume ${resume} \
-                                    --output_dir ~/weights/Faster-RCNN/val \
                                     --dataset_file ${dataset_file}\
                                     --coco_path ~${coco_path} \
                                     --data_path ~${coco_path} \
